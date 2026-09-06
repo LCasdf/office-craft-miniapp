@@ -1,0 +1,18 @@
+FROM python:3.11-slim-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ghostscript \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Placeholder: full uv sync when lockfile exists; M0 copies sources for editable layout
+COPY pyproject.toml ./
+COPY packages ./packages
+COPY apps ./apps
+
+RUN pip install --no-cache-dir uv \
+    && uv sync --no-dev || pip install -e packages/oc_shared -e packages/oc_core -e apps/api -e apps/worker celery redis
+
+CMD ["celery", "-A", "oc_worker.celery_app:celery_app", "worker", "-l", "INFO", "-Q", "q.tools,q.ai"]

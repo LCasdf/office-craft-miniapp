@@ -1,0 +1,17 @@
+{
+  "description": "Office Craft 微信小程序骨架（M0）",
+  "packOptions": {
+    "ignore": []
+  },
+  "setting": {
+    "bundle": false,
+    "es6": true,
+    "postcss": true,
+    "minified": false
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.5",
+  "appid": "touristappid",
+  "projectname": "office-craft",
+  "condition": {}
+}

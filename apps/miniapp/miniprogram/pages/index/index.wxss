@@ -1,0 +1,11 @@
+.page { padding: 48rpx; }
+.brand { font-size: 56rpx; font-weight: 700; }
+.sub { margin-top: 12rpx; color: #666; margin-bottom: 48rpx; }
+.grid { display: flex; flex-wrap: wrap; gap: 24rpx; margin-bottom: 48rpx; }
+.item {
+  width: 300rpx;
+  padding: 32rpx;
+  background: #fff;
+  border-radius: 12rpx;
+}
+button { margin-top: 24rpx; }

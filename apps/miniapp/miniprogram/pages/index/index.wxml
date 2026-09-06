@@ -1,0 +1,11 @@
+<view class="page">
+  <view class="brand">文匠工具</view>
+  <view class="sub">Office Craft · M0 骨架</view>
+  <view class="grid">
+    <block wx:for="{{tools}}" wx:key="id">
+      <view class="item">{{item.name}}</view>
+    </block>
+  </view>
+  <button bindtap="goTasks">任务中心</button>
+  <button bindtap="goMe">我的</button>
+</view>

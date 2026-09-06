@@ -1,0 +1,13 @@
+# task_timeouts.yaml — single source for API timeout_at & Celery (load in later milestone)
+defaults:
+  task_timeout_seconds: 180
+  queue_wait_timeout_seconds: 600
+
+types:
+  image_to_pdf: 60
+  pdf_compress: 60
+  pdf_merge: 120
+  office_to_pdf: 180
+  character_card: 120
+  ppt_generate: 120
+  novel_chapter: 120

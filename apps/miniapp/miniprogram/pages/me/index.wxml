@@ -1,0 +1,3 @@
+<view class="page">
+  <view>剩余额度（占位）：{{available}}</view>
+</view>

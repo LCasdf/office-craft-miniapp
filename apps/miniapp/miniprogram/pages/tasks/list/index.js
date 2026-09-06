@@ -1,0 +1,4 @@
+Page({
+  data: { items: [] },
+  onShow() {},
+});
