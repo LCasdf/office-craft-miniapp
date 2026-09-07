@@ -1,11 +1,12 @@
 # Office Craft — API 契约（初稿）
 
-> 文档版本：v0.2-draft  
-> 更新日期：2026-09-05  
-> 对齐蓝图：`docs/01-项目蓝图.md` v0.6（§4.10 / §4.11）与开发规范 v0.6（§5）  
-> 协议：HTTPS + JSON（`Content-Type: application/json`）  
-> Base URL（示例）：`https://api.example.com`  
-> OpenAPI：本文 §8 含完整 **OpenAPI 3.0** YAML；前文为 Markdown 可读版
+> 文档版本：v0.4-draft  
+> 更新日期：2026-09-07  
+> 对齐蓝图：`docs/01-项目蓝图.md` 与开发规范；实现进度见 `docs/07-项目进度.md`  
+> 协议：HTTPS + JSON（`Content-Type: application/json`）；本地上传另支持 `multipart/form-data`（§3.2）  
+> Base URL（示例）：`https://api.example.com`（本地：`http://127.0.0.1:8000`）  
+> OpenAPI：本文 §8 含 OpenAPI 3.0 YAML 初稿；§3.2 / §4.7 等以 Markdown 为准，YAML 逐步对齐  
+> **已实现（M1）：** 创建/列表/详情、cancel、retry、download、delete；上传凭证 + API 代传；`/healthz`、`/metrics`；鉴权仍为 stub（未强制 JWT）
 
 ---
 
@@ -265,9 +266,10 @@
     "uploadId": "upl_01ABC...",
     "expireAt": "2026-09-05T10:15:00.000+08:00",
     "cos": {
-      "bucket": "oc-dev-123",
-      "region": "ap-guangzhou",
-      "pathPrefix": "dev/10001/uploads/upl_01ABC/",
+      "bucket": "office-craft",
+      "region": "us-east-1",
+      "endpoint": "http://127.0.0.1:9000",
+      "pathPrefix": "local/0/uploads/upl_01ABC/",
       "credentials": {
         "tmpSecretId": "...",
         "tmpSecretKey": "...",
@@ -276,11 +278,14 @@
         "expiredTime": 1757040900
       }
     },
+    "uploadApiPath": "/v1/uploads/upl_01ABC.../objects",
     "estimatedCostQuota": 2
   },
   "requestId": "req_01UPL..."
 }
 ```
+
+> **本地 / 当前实现：** 小程序与 curl 走 `uploadApiPath`（见 §3.2）把文件交给 API 写入 MinIO，**不必**在客户端直接用 STS 直传。生产可改为真 COS STS，客户端直传 `pathPrefix`。
 
 #### 错误码
 
@@ -292,6 +297,51 @@
 | 40005 | too_many_inflight_tasks | 进行中的任务已满（最多3个），请先到任务中心查看 |
 | 41001 | unauthorized | 登录已失效，请重新登录 |
 | 50001 | internal_error | 服务繁忙，请稍后重试 |
+
+---
+
+### 3.2 上传对象（本地 / API 代传）
+
+- **方法 / 路径：** `POST /v1/uploads/{uploadId}/objects`
+- **鉴权：** 是（当前实现尚未强制 JWT）
+- **说明：** `multipart/form-data`；将文件写入 MinIO，键为 `{pathPrefix}{index}_{safeFilename}`。用于本地与小程序，替代浏览器侧 STS 直传。
+
+#### 请求参数
+
+| 位置 | 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|------|
+| path | `uploadId` | string | 是 | 凭证返回的 `upl_...` |
+| form | `file` | file | 是 | 文件本体 |
+| form | `index` | integer | 否 | 多文件序号，默认 0 |
+| form | `taskType` | string | 否 | 用于扩展名校验（如 `image_to_pdf` / `office_to_pdf`） |
+
+#### 响应示例
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "user_msg": "ok",
+  "data": {
+    "uploadId": "upl_01ABC...",
+    "cosKey": "local/0/uploads/upl_01ABC.../0_a.png",
+    "filename": "a.png",
+    "sizeBytes": 128,
+    "index": 0
+  },
+  "requestId": "req_01UPL..."
+}
+```
+
+创建任务时把返回的 `cosKey` 填入 `inputs[].cosKey`。
+
+#### 错误码
+
+| code | message | user_msg |
+|------|---------|----------|
+| 40001 | param_invalid | 参数有误 / 扩展名不符 |
+| 40002 | file_too_large | 文件过大，请压缩后再上传 |
+| 50001 | internal_error | 服务繁忙，请稍后重试（含 MinIO 不可达） |
 
 ---
 
@@ -565,7 +615,8 @@
 
 - **方法 / 路径：** `GET /v1/tasks/{taskId}/download`
 - **鉴权：** 是
-- **说明：** 校验归属；仅 `succeeded` 且未过期；返回签名临时 URL（默认 **15 分钟**）。亦可使用详情中的 `outputs[].downloadUrl`（同等过期策略）。
+- **说明：** 校验归属；仅 `succeeded` 且未过期；返回签名临时 URL（默认 **15 分钟**）。  
+  过期返回 `40016`。详情接口在过期时 `outputs=[]` 且 `resultExpired=true`。对象键形如 `{env}/{userId}/results/{taskId}/result.pdf`。
 
 #### 请求参数
 
@@ -601,6 +652,34 @@
 | 40017 | result_not_ready | 任务未完成，暂不可下载 |
 | 41001 | unauthorized | 登录已失效，请重新登录 |
 | 40029 | rate_limited | 请求过于频繁，请稍后再试 |
+| 50001 | internal_error | 服务繁忙，请稍后重试 |
+
+---
+
+### 4.7 删除任务（任务中心）
+
+- **方法 / 路径：** `DELETE /v1/tasks/{taskId}`
+- **鉴权：** 是（当前实现尚未强制 JWT；dev `user_id=0`）
+- **说明：** 从任务中心移除记录（硬删行）。若仍有未结算预占则先返还再删。
+
+#### 响应示例
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "user_msg": "ok",
+  "data": { "taskId": "01HTASKPUBLICIDXXXXX", "deleted": true },
+  "requestId": "req_01TASKDEL...",
+  "taskId": "01HTASKPUBLICIDXXXXX"
+}
+```
+
+#### 错误码
+
+| code | message | user_msg |
+|------|---------|----------|
+| 40009 | task_not_found | 任务不存在或无权访问 |
 | 50001 | internal_error | 服务繁忙，请稍后重试 |
 
 ---
@@ -1193,6 +1272,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiEnvelope"
+    delete:
+      tags: [tasks]
+      summary: 删除任务（任务中心）
+      operationId: deleteTask
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TaskId"
+      responses:
+        "200":
+          description: 包络响应
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiEnvelope"
 
   /v1/tasks/{taskId}/retry:
     post:
@@ -1512,9 +1606,14 @@ components:
 |------|------|------|
 | v0.1-draft | 2026-09-05 | 初稿：覆盖蓝图 API 面全部接口；含 Markdown + OpenAPI 3.0 |
 | v0.2-draft | 2026-09-05 | 对齐双 Token/refresh、download、限流 40029、AI 2000 字限制 |
+| v0.3-draft | 2026-09-07 | 本地上传代传、实现备注 |
+| v0.4-draft | 2026-09-07 | download/retry 已落地说明；补 DELETE 任务；对齐进度 |
 
 ## 10. 相关文档
 
 - [项目蓝图](./01-项目蓝图.md)
 - [开发规范](./02-开发规范.md)
 - [数据模型](./04-数据模型.md)
+- [启动步骤](./05-启动步骤.md)
+- [排期与测试](./06-排期与测试.md)
+- [项目进度](./07-项目进度.md)
