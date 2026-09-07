@@ -1,7 +1,6 @@
 """Auth stubs — full WeChat login in later milestone."""
 
 from fastapi import APIRouter, Request
-
 from oc_shared.error_codes import ErrorCode
 from oc_shared.schemas import RefreshRequest, WxLoginRequest, envelope_err, envelope_ok
 

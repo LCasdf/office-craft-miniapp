@@ -6,11 +6,11 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-
-from oc_api.logging_setup import configure_logging
-from oc_api.routers import auth, health, me, tasks
 from oc_shared.error_codes import ErrorCode
 from oc_shared.schemas import envelope_err
+
+from oc_api.logging_setup import configure_logging
+from oc_api.routers import auth, health, me, tasks, uploads
 
 configure_logging()
 logger = structlog.get_logger(__name__)
@@ -56,6 +56,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router, prefix="/v1")
     app.include_router(me.router, prefix="/v1")
+    app.include_router(uploads.router, prefix="/v1")
     app.include_router(tasks.router, prefix="/v1")
     return app
 
