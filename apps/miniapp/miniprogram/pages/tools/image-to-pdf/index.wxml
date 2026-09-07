@@ -1,0 +1,23 @@
+<view class="oc-page tool-page">
+  <view class="oc-card panel">
+    <view class="panel__head">
+      <view class="panel__title">图片转 PDF</view>
+      <view class="oc-hint">jpg / png / webp，最多 20 张</view>
+    </view>
+
+    <view class="upload-zone" bindtap="choose">
+      <view class="upload-zone__icon">🖼️</view>
+      <view class="upload-zone__title">点击选择图片</view>
+      <view class="upload-zone__desc">支持多选 · 按选择顺序合成 PDF</view>
+    </view>
+
+    <view class="file-chip" wx:if="{{files.length}}">已选 {{files.length}} 张图片</view>
+
+    <view class="actions">
+      <button class="btn btn-secondary" bindtap="choose" disabled="{{busy}}">重新选择</button>
+      <button class="btn btn-primary" bindtap="submit" disabled="{{busy}}">
+        {{busy ? '处理中…' : '开始转换'}}
+      </button>
+    </view>
+  </view>
+</view>

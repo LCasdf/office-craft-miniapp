@@ -1,0 +1,37 @@
+<view class="oc-page tool-page">
+  <view class="oc-card panel">
+    <view class="panel__head">
+      <view class="panel__title">PDF 合并</view>
+      <view class="oc-hint">2–10 个文件 · 可多次添加 · 单文件 ≤30MB · 合计 ≤50MB / 200 页</view>
+    </view>
+
+    <view class="upload-zone" bindtap="choose">
+      <view class="upload-zone__icon">📚</view>
+      <view class="upload-zone__title">{{files.length ? '继续添加 PDF' : '点击选择 PDF'}}</view>
+      <view class="upload-zone__desc">聊天里可多选；若一次只能选 1 个，点这里继续添加。顺序即合并顺序</view>
+    </view>
+
+    <view class="file-list" wx:if="{{files.length}}">
+      <view class="file-row" wx:for="{{files}}" wx:key="path">
+        <view class="file-row__name">{{index + 1}}. {{item.name}}</view>
+        <view class="file-row__ops">
+          <text class="file-row__op" data-index="{{index}}" catchtap="moveUp">上移</text>
+          <text class="file-row__op" data-index="{{index}}" catchtap="moveDown">下移</text>
+          <text class="file-row__op is-danger" data-index="{{index}}" catchtap="remove">删除</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="actions">
+      <button class="btn btn-secondary" bindtap="choose" disabled="{{busy || files.length >= 10}}">
+        继续添加（{{files.length}}/10）
+      </button>
+      <button class="btn btn-ghost" bindtap="clearFiles" disabled="{{busy || !files.length}}" wx:if="{{files.length}}">
+        清空重选
+      </button>
+      <button class="btn btn-primary" bindtap="submit" disabled="{{busy}}">
+        {{busy ? '处理中…' : '开始合并'}}
+      </button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,36 @@
+<view class="oc-page tool-page">
+  <view class="oc-card panel">
+    <view class="panel__head">
+      <view class="panel__title">PDF 压缩</view>
+      <view class="oc-hint">单个 PDF ≤ 50MB · 加密文件会失败</view>
+    </view>
+
+    <view class="upload-zone" bindtap="choose">
+      <view class="upload-zone__icon">🗜️</view>
+      <view class="upload-zone__title">点击选择 PDF</view>
+      <view class="upload-zone__desc">压缩后可在任务中心下载 · 展示压缩前后体积</view>
+    </view>
+
+    <view class="file-chip" wx:if="{{file}}">{{file.name}}</view>
+
+    <view class="quality-row">
+      <view
+        class="quality {{quality === item.id ? 'is-on' : ''}}"
+        wx:for="{{qualities}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="setQuality"
+      >
+        <view class="quality__name">{{item.name}}</view>
+        <view class="quality__hint">{{item.hint}}</view>
+      </view>
+    </view>
+
+    <view class="actions">
+      <button class="btn btn-secondary" bindtap="choose" disabled="{{busy}}">重新选择</button>
+      <button class="btn btn-primary" bindtap="submit" disabled="{{busy}}">
+        {{busy ? '处理中…' : '开始压缩'}}
+      </button>
+    </view>
+  </view>
+</view>

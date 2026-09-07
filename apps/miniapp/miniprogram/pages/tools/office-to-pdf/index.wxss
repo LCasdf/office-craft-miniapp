@@ -1,0 +1,21 @@
+.tool-page .panel {
+  padding: 36rpx 32rpx 40rpx;
+}
+
+.panel__head {
+  margin-bottom: 28rpx;
+}
+
+.panel__title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8rpx;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-top: 32rpx;
+}

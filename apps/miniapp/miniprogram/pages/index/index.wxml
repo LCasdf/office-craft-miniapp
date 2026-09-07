@@ -1,11 +1,28 @@
-<view class="page">
-  <view class="brand">文匠工具</view>
-  <view class="sub">Office Craft · M0 骨架</view>
-  <view class="grid">
-    <block wx:for="{{tools}}" wx:key="id">
-      <view class="item">{{item.name}}</view>
-    </block>
+<view class="oc-page home">
+  <view class="hero">
+    <view class="oc-title">文匠工具</view>
+    <view class="oc-sub">轻量文档处理 · 干净好用</view>
   </view>
-  <button bindtap="goTasks">任务中心</button>
-  <button bindtap="goMe">我的</button>
+
+  <view class="tool-grid">
+    <view
+      class="tool-card {{item.ready ? '' : 'is-disabled'}}"
+      wx:for="{{tools}}"
+      wx:key="id"
+      hover-class="tool-card--active"
+      hover-stay-time="80"
+      data-url="{{item.url}}"
+      data-ready="{{item.ready}}"
+      bindtap="onTool"
+    >
+      <view class="tool-card__icon">{{item.icon}}</view>
+      <view class="tool-card__name">{{item.name}}</view>
+      <view class="tool-card__desc">{{item.desc}}</view>
+    </view>
+  </view>
+
+  <view class="nav-row">
+    <button class="btn btn-ghost nav-btn" bindtap="goTasks">📋 任务中心</button>
+    <button class="btn btn-ghost nav-btn" bindtap="goMe">👤 我的</button>
+  </view>
 </view>

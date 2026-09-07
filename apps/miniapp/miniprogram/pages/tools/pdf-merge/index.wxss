@@ -1,0 +1,58 @@
+.tool-page .panel {
+  padding: 36rpx 32rpx 40rpx;
+}
+
+.panel__head {
+  margin-bottom: 28rpx;
+}
+
+.panel__title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8rpx;
+}
+
+.file-list {
+  margin-top: 24rpx;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 18rpx 20rpx;
+  margin-bottom: 12rpx;
+  border-radius: 12rpx;
+  background: #eff6ff;
+}
+
+.file-row__name {
+  flex: 1;
+  font-size: 24rpx;
+  color: #1e40af;
+  word-break: break-all;
+}
+
+.file-row__ops {
+  display: flex;
+  gap: 20rpx;
+  flex-shrink: 0;
+}
+
+.file-row__op {
+  font-size: 22rpx;
+  color: #2563eb;
+}
+
+.file-row__op.is-danger {
+  color: #ef4444;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-top: 32rpx;
+}

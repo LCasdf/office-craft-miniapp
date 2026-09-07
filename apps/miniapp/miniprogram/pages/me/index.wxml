@@ -1,3 +1,19 @@
-<view class="page">
-  <view>剩余额度（占位）：{{available}}</view>
+<view class="oc-page me-page">
+  <view class="profile-card">
+    <view class="avatar">👤</view>
+    <view class="profile-card__body">
+      <view class="profile-card__name">文匠用户</view>
+      <view class="profile-card__desc">本地开发占位</view>
+    </view>
+  </view>
+
+  <view class="quota-card">
+    <view class="quota-card__label">可用额度</view>
+    <view class="quota-card__value">{{loading ? '…' : available}}</view>
+    <view class="quota-card__rows">
+      <view class="quota-card__row">今日剩余 {{dailyRemaining}} / {{dailyQuotaLimit}}</view>
+      <view class="quota-card__row" wx:if="{{frozenQuota}}">预扣中 {{frozenQuota}}</view>
+    </view>
+    <view class="quota-card__tip">提交任务时预扣；成功实扣，失败/取消返还</view>
+  </view>
 </view>

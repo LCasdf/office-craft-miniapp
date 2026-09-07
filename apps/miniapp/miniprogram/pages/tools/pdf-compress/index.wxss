@@ -1,0 +1,53 @@
+.tool-page .panel {
+  padding: 36rpx 32rpx 40rpx;
+}
+
+.panel__head {
+  margin-bottom: 28rpx;
+}
+
+.panel__title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8rpx;
+}
+
+.quality-row {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 28rpx;
+}
+
+.quality {
+  flex: 1;
+  padding: 20rpx 12rpx;
+  border-radius: 12rpx;
+  background: #f8fafc;
+  text-align: center;
+  border: 2rpx solid transparent;
+}
+
+.quality.is-on {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+.quality__name {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #111827;
+}
+
+.quality__hint {
+  margin-top: 6rpx;
+  font-size: 20rpx;
+  color: #9ca3af;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-top: 32rpx;
+}

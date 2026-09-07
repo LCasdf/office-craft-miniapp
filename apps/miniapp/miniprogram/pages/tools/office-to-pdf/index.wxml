@@ -1,0 +1,23 @@
+<view class="oc-page tool-page">
+  <view class="oc-card panel">
+    <view class="panel__head">
+      <view class="panel__title">Word 转 PDF</view>
+      <view class="oc-hint">支持 doc / docx（需 Worker 安装 LibreOffice）</view>
+    </view>
+
+    <view class="upload-zone" bindtap="choose">
+      <view class="upload-zone__icon">📄</view>
+      <view class="upload-zone__title">点击选择 Word</view>
+      <view class="upload-zone__desc">单次 1 个文件 · 转换后可在任务中心下载</view>
+    </view>
+
+    <view class="file-chip" wx:if="{{file}}">{{file.name}}</view>
+
+    <view class="actions">
+      <button class="btn btn-secondary" bindtap="choose" disabled="{{busy}}">重新选择</button>
+      <button class="btn btn-primary" bindtap="submit" disabled="{{busy}}">
+        {{busy ? '处理中…' : '开始转换'}}
+      </button>
+    </view>
+  </view>
+</view>
