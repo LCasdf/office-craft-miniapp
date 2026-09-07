@@ -6,8 +6,8 @@ cd "$ROOT"
 echo "==> uv sync"
 uv sync
 
-echo "==> ruff (if available)"
-uv run ruff check packages apps || true
+echo "==> ruff"
+uv run ruff check packages apps
 
 echo "==> pytest"
 uv run pytest -q

@@ -1,0 +1,4 @@
+# M1 load reports (generated)
+
+Copy `REPORT_TEMPLATE.md` when writing a Gate G1 report. Generated JSON from
+`run_inflight.py` lands here as `inflight_*.json` (gitignored).
