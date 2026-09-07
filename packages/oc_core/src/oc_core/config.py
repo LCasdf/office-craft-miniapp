@@ -24,6 +24,27 @@ class Settings(BaseSettings):
     refresh_token_ttl_seconds: int = 2592000
 
     max_inflight_tasks_per_user: int = 3
+    upload_credential_ttl_seconds: int = 900
+    download_url_ttl_seconds: int = 900
+    input_ttl_seconds: int = 6 * 3600
+    output_ttl_seconds: int = 24 * 3600
+    cleanup_interval_seconds: int = 3600
+    alert_interval_seconds: int = 300
+    alert_success_rate_min: float = 0.95
+    alert_queue_depth_max: int = 100
+    alert_window_seconds: int = 900
+
+    cos_secret_id: str = ""
+    cos_secret_key: str = ""
+    cos_region: str = "ap-guangzhou"
+    cos_bucket: str = "office-craft"
+    cos_env_prefix: str = "local"
+
+    # MinIO / S3-compatible (local default). Empty endpoint → use AWS/COS style host later.
+    s3_endpoint_url: str = "http://127.0.0.1:9000"
+    s3_access_key: str = "minioadmin"
+    s3_secret_key: str = "minioadmin"
+    s3_region: str = "us-east-1"
 
     ai_provider: str = "mock"
     ai_api_key: str = ""

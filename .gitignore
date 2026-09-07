@@ -25,11 +25,15 @@ htmlcov/
 # Mini program
 apps/miniapp/miniprogram/node_modules/
 apps/miniapp/project.private.config.json
+apps/miniapp/miniprogram/project.private.config.json
 
 # Runtime
 tmp/
 *.log
 .celerybeat*
+celerybeat-schedule*
 
 # Generated
 apps/miniapp/miniprogram/constants/generated/
+scripts/load/reports/*.json
+scripts/ppt_poc/out/

@@ -29,7 +29,9 @@ class User(Base):
     nickname: Mapped[str | None] = mapped_column(String(64), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     status: Mapped[int] = mapped_column(TINYINT, nullable=False, default=1)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=False), server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False), server_default=func.now(), onupdate=func.now()
     )
@@ -38,7 +40,7 @@ class User(Base):
 class Quota(Base):
     __tablename__ = "quotas"
 
-    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
     daily_quota_limit: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
     daily_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     daily_used_date: Mapped[date] = mapped_column(Date, nullable=False)
@@ -53,7 +55,9 @@ class Quota(Base):
 
 class Task(Base):
     __tablename__ = "tasks"
-    __table_args__ = (UniqueConstraint("user_id", "idempotency_key", name="uk_tasks_user_idempotency"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "idempotency_key", name="uk_tasks_user_idempotency"),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     public_id: Mapped[str] = mapped_column(String(26), unique=True, nullable=False)
@@ -70,11 +74,21 @@ class Task(Base):
     input_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     output_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    timeout_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False), nullable=True)
-    result_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False), nullable=True)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False), nullable=True)
-    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=False), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=False), server_default=func.now())
+    timeout_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=False), nullable=True
+    )
+    result_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=False), nullable=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=False), nullable=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=False), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=False), server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False), server_default=func.now(), onupdate=func.now()
     )

@@ -1,4 +1,5 @@
 from collections.abc import Generator
+from contextlib import contextmanager
 from functools import lru_cache
 
 from sqlalchemy import create_engine
@@ -26,6 +27,7 @@ def get_session_factory() -> sessionmaker[Session]:
     return sessionmaker(bind=get_engine(), autoflush=False, autocommit=False)
 
 
+@contextmanager
 def session_scope() -> Generator[Session, None, None]:
     factory = get_session_factory()
     session = factory()
