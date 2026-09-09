@@ -662,6 +662,22 @@
 - **鉴权：** 是（当前实现尚未强制 JWT；dev `user_id=0`）
 - **说明：** 从任务中心移除记录（硬删行）。若仍有未结算预占则先返还再删。
 
+#### 4.7.1 清空全部任务
+
+- **方法 / 路径：** `DELETE /v1/tasks`
+- **鉴权：** 是（dev `user_id=0`）
+- **说明：** 删除当前用户全部任务；未结算预扣先返还。进行中任务一并移除（Worker 遇缺失则跳过）。
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "user_msg": "已清空任务",
+  "data": { "deleted": 3 },
+  "requestId": "req_01TASKCLR..."
+}
+```
+
 #### 响应示例
 
 ```json
@@ -686,28 +702,61 @@
 
 ## 5. AI 生成
 
-### 5.1 角色卡生成（草稿）
+### 5.1 角色卡（草稿 → 编辑 → 出图）
 
-- **方法 / 路径：** `POST /v1/ai/character-card/generate`
-- **鉴权：** 是
-- **幂等键：** **`Idempotency-Key` 必填**
-- **说明：** 生成可编辑草稿（JSON）；出图可同事务异步建 `character_card` 任务或返回 `renderTaskId`。须双向内容审核。
+> M2a：小程序演示主路径为 **文生图** `POST .../imagine`（Mock 立绘，不扣点）+ 本地 `roleCardList` 卡集；服务端仍保留 generate → put → render（预扣 3）供任务出图。安全拒绝 `42001` 不返还。详见 [08-AI与Prompt规范](./08-AI与Prompt规范.md)。
 
-#### 请求参数（Body）
+#### 5.1.0 角色卡集（列表）
+
+- **方法 / 路径：** `GET /v1/ai/character-card`
+- **说明：** 当前用户的角色卡列表（含 `coverUrl`）；**不**出现在任务中心。`character_card` 出图任务仍走 Worker/额度，但 `GET /v1/tasks` 排除该类型。
+
+#### 5.1.0b 文生图（演示主路径）
+
+- **方法 / 路径：** `POST /v1/ai/character-card/imagine`
+- **鉴权：** 是（dev 暂 `user_id=0`）
+- **说明：** 根据文字描述同步生成角色立绘 PNG（当前 `AI_PROVIDER=mock` 风格化立绘），上传对象存储并返回 `imageUrl`；**不**建任务、**不**扣额度。输入审核失败 → `42001`。
+
+##### 请求参数（Body）
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `name` | string | 否 | 角色名；可空由模型补全 |
-| `premise` | string | 是 | 设定摘要；**≤ 2000 字符**（前后端双校验） |
-| `personality` | string | 否 | 性格 |
-| `appearance` | string | 否 | 外貌 |
-| `abilities` | string | 否 | 能力 |
-| `catchphrase` | string | 否 | 口头禅 |
-| `taboos` | string | 否 | 禁忌 |
-| `extra` | object | 否 | 扩展字段 |
-| `renderImage` | boolean | 否 | 默认 `true`，是否排队出图 |
+| `prompt` | string | 建议 | 综合描述；可与下列字段拼装 |
+| `name` / `title` / `avatarDesc` / `personality` / `story` | string | 否 | 参与拼装出图 prompt |
 
-#### 响应示例
+##### 响应示例
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "user_msg": "角色图片已生成",
+  "data": {
+    "imageUrl": "http://127.0.0.1:9000/...",
+    "cosKey": "local/0/rolecards/....png",
+    "filename": "character.png",
+    "sizeBytes": 22828,
+    "provider": "mock"
+  },
+  "requestId": "req_..."
+}
+```
+
+#### 5.1.1 生成草稿
+
+- **方法 / 路径：** `POST /v1/ai/character-card/generate`
+- **鉴权：** 是（dev 暂 `user_id=0`）
+- **幂等键：** **`Idempotency-Key` 必填**
+- **说明：** Mock AI 返回可编辑 JSON；**不**创建出图任务、**不**扣额度。
+
+##### 请求参数（Body）
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `premise` | string | 是 | 设定摘要；**≤ 2000 字符** |
+| `name` | string | 否 | 角色名；可空由模型补全 |
+
+##### 响应示例
 
 ```json
 {
@@ -715,38 +764,74 @@
   "message": "ok",
   "user_msg": "角色卡草稿已生成，请确认后保存",
   "data": {
-    "cardId": "2001",
+    "cardId": "a1b2c3d4e5f6...",
     "version": 1,
     "schemaVersion": "1",
+    "promptVersion": "character_card.v1",
     "payload": {
+      "schemaVersion": "1",
       "name": "林秋",
+      "summary": "...",
       "personality": "...",
-      "appearance": "...",
-      "abilities": "...",
-      "catchphrase": "...",
-      "taboos": "..."
+      "traits": ["执着", "温柔"]
     },
-    "costQuota": 3,
-    "renderTaskId": "01HRENDERTASKXXXX"
+    "costQuota": 0
   },
-  "requestId": "req_01CARD...",
-  "taskId": "01HRENDERTASKXXXX"
+  "requestId": "req_01CARD..."
 }
 ```
 
-#### 错误码
+##### 错误码
 
 | code | message | user_msg |
 |------|---------|----------|
 | 40001 | param_invalid | 参数有误，请检查后重试 |
+| 40008 | idempotency_key_required | 缺少幂等键，请重试 |
+| 40007 | idempotency_key_conflict | 重复提交的内容与首次不一致，请勿复用同一幂等键 |
+| 40013 | input_too_long | 设定过长，请精简后再试 |
+| 42001 | content_blocked | 内容未通过安全审核，请修改后重试 |
+| 52001 | ai_upstream_failed | AI 服务暂不可用，请稍后重试 |
+
+#### 5.1.2 读取 / 更新草稿
+
+- **GET** `/v1/ai/character-card/{cardId}`
+- **PUT** `/v1/ai/character-card/{cardId}`
+  - Header：`If-Match: <version>`（或 Body `version`）
+  - Body：`{ "version": N, "payload": { ... } }`
+  - 乐观锁冲突 → `40015` `project_version_mismatch`（user_msg：角色卡已更新，请刷新后重试）
+  - 输出字段审核失败 → `42001`
+
+#### 5.1.3 确认出图
+
+- **方法 / 路径：** `POST /v1/ai/character-card/{cardId}/render`
+- **幂等键：** **`Idempotency-Key` 必填**
+- **说明：** 输出审核 → `assert_inflight` → `reserve(3)` → 建 `character_card` 任务入 `q.ai`（Pillow PNG）。
+
+##### 响应示例
+
+```json
+{
+  "code": 0,
+  "message": "ok",
+  "user_msg": "出图任务已提交",
+  "data": {
+    "cardId": "a1b2c3d4e5f6...",
+    "renderTaskId": "01HRENDERTASKXXXX",
+    "costQuota": 3
+  },
+  "requestId": "req_01RENDER...",
+  "taskId": "01HRENDERTASKXXXX"
+}
+```
+
+##### 错误码（出图）
+
+| code | message | user_msg |
+|------|---------|----------|
 | 40003 | quota_exhausted | 今日额度已用完，明天再来或开通会员 |
 | 40005 | too_many_inflight_tasks | 进行中的任务已满（最多3个），请先到任务中心查看 |
-| 40007 | idempotency_key_conflict | 重复提交的内容与首次不一致，请勿复用同一幂等键 |
 | 40008 | idempotency_key_required | 缺少幂等键，请重试 |
 | 42001 | content_blocked | 内容未通过安全审核，请修改后重试 |
-| 41001 | unauthorized | 登录已失效，请重新登录 |
-| 52001 | ai_upstream_failed | AI 服务暂不可用，请稍后重试 |
-| 50001 | internal_error | 服务繁忙，请稍后重试 |
 
 ---
 

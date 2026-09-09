@@ -59,4 +59,4 @@ uv run pytest -q --cov=oc_core --cov=oc_api --cov-fail-under=60
 curl -s localhost:8000/healthz
 ```
 
-> **当前进度（见 [docs/07](./docs/07-项目进度.md)）：** M0 完成（G0）；M1 进行中——四条工具 + 任务中心（重试/下载/过期）+ 额度/幂等/inflight + 清理告警已通；**G1 未过**（正式压测报告与覆盖率目标未达标）。PPT POC = **条件 Go**。
+> **当前进度（见 [docs/07](./docs/07-项目进度.md)）：** M0/M1 完成（**G1 通过**）；下一步 **M2a 角色卡**。PPT POC = 条件 Go。
