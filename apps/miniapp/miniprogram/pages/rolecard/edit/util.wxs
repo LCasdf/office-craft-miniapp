@@ -1,0 +1,12 @@
+function trunc(s, n) {
+  s = s == null ? "" : "" + s;
+  n = n || 8;
+  return s.length > n ? s.substring(0, n) : s;
+}
+
+function initial(s) {
+  s = s == null ? "" : "" + s;
+  return s ? s.substring(0, 1) : "?";
+}
+
+module.exports = { trunc: trunc, initial: initial };

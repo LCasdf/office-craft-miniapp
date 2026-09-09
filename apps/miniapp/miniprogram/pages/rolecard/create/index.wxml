@@ -1,0 +1,86 @@
+<view class="oc-page editor-page">
+  <view class="hint-banner">
+    用文字描述角色，点击
+    <text class="hint-banner__em">生成角色图片</text>
+    ，得到角色立绘；人设表单用于补充描述。
+  </view>
+
+  <view class="panel">
+    <view class="panel__title">角色描述</view>
+    <view class="panel__sub">越具体越好：外貌、气质、服装、场景</view>
+    <textarea
+      class="field-area"
+      maxlength="2000"
+      placeholder="例如：隐居山林的草药师，银发，青衣，眼神清冷，身后是晨雾竹林"
+      value="{{form.prompt}}"
+      bindinput="onPrompt"
+    />
+    <button
+      class="btn btn-ghost"
+      loading="{{aiBusy}}"
+      disabled="{{aiBusy || imagineBusy}}"
+      bindtap="onAiGenerate"
+    >先补全人设文字（可选）</button>
+    <button
+      class="btn btn-primary"
+      style="margin-top: 16rpx;"
+      loading="{{imagineBusy}}"
+      disabled="{{imagineBusy || aiBusy}}"
+      bindtap="onImagineImage"
+    >根据文字生成角色图片</button>
+  </view>
+
+  <view class="panel" wx:if="{{cardImagePath}}">
+    <view class="panel__title">角色图片（成品）</view>
+    <image
+      class="hero-img"
+      src="{{cardImagePath}}"
+      mode="widthFix"
+      bindtap="onPreviewRendered"
+    />
+  </view>
+
+  <view class="panel section" wx:for="{{sections}}" wx:key="id">
+    <view class="section__head" data-id="{{item.id}}" bindtap="toggleSection">
+      <text class="section__title">{{item.title}}</text>
+      <text class="section__arrow">{{item.open ? '▾' : '▸'}}</text>
+    </view>
+    <view class="section__body" wx:if="{{item.open}}">
+      <block wx:if="{{item.id === 'basic'}}">
+        <view class="avatar-row">
+          <view class="avatar-box" bindtap="onPickAvatar">
+            <image wx:if="{{form.avatarPath}}" class="avatar-img" src="{{form.avatarPath}}" mode="aspectFill" />
+            <text wx:else class="avatar-ph">自选头像</text>
+          </view>
+          <view class="avatar-fields">
+            <input class="field-input" placeholder="姓名" value="{{form.name}}" data-key="name" bindinput="onField" />
+            <input class="field-input" placeholder="称号" value="{{form.title}}" data-key="title" bindinput="onField" />
+          </view>
+        </view>
+      </block>
+      <block wx:elif="{{item.id === 'look'}}">
+        <textarea class="field-area field-area--sm" placeholder="形象外貌（会参与出图描述）" value="{{form.avatarDesc}}" data-key="avatarDesc" bindinput="onField" />
+      </block>
+      <block wx:elif="{{item.id === 'personality'}}">
+        <textarea class="field-area field-area--sm" placeholder="性格特质" value="{{form.personality}}" data-key="personality" bindinput="onField" />
+      </block>
+      <block wx:elif="{{item.id === 'story'}}">
+        <textarea class="field-area" placeholder="背景故事" value="{{form.story}}" data-key="story" bindinput="onField" />
+      </block>
+      <block wx:elif="{{item.id === 'power'}}">
+        <textarea class="field-area field-area--sm" placeholder="能力" value="{{form.ability}}" data-key="ability" bindinput="onField" />
+        <textarea class="field-area field-area--sm" placeholder="弱点" value="{{form.weakness}}" data-key="weakness" bindinput="onField" />
+      </block>
+      <block wx:elif="{{item.id === 'remark'}}">
+        <textarea class="field-area field-area--sm" placeholder="备注" value="{{form.remark}}" data-key="remark" bindinput="onField" />
+      </block>
+    </view>
+  </view>
+
+  <view class="actions">
+    <button class="btn btn-primary" loading="{{imagineBusy}}" disabled="{{imagineBusy}}" bindtap="onImagineImage">生成 / 重新生成角色图片</button>
+    <button class="btn btn-primary btn-primary--soft" disabled="{{!cardImagePath || saveBusy}}" bindtap="onSaveCardToCollection">保存角色图片到卡集</button>
+    <button class="btn btn-ghost" disabled="{{imagineBusy || saveBusy}}" bindtap="onSaveDraft">仅保存文字草稿</button>
+    <button class="btn btn-ghost" loading="{{saveBusy}}" disabled="{{saveBusy || !cardImagePath}}" bindtap="onSavePhoto">保存图片到相册</button>
+  </view>
+</view>

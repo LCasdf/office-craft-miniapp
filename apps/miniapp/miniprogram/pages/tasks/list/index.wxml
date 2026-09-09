@@ -1,4 +1,13 @@
 <view class="oc-page tasks-page">
+  <view class="tasks-toolbar" wx:if="{{!loading && !error && items.length > 0}}">
+    <text class="tasks-toolbar__count">共 {{items.length}} 条</text>
+    <button
+      class="tasks-toolbar__clear"
+      bindtap="onClear"
+      disabled="{{!!busyId || clearing}}"
+      loading="{{clearing}}"
+    >清空</button>
+  </view>
   <view class="empty-card" wx:if="{{loading}}">
     <view class="empty-card__text">加载中…</view>
   </view>
@@ -12,64 +21,78 @@
   </view>
   <block wx:else>
     <view class="task-card" wx:for="{{items}}" wx:key="taskId">
+      <view class="task-card__head">
+        <view class="task-card__type">
+          <text wx:if="{{item.type === 'pdf_compress'}}">PDF 压缩</text>
+          <text wx:elif="{{item.type === 'pdf_merge'}}">PDF 合并</text>
+          <text wx:elif="{{item.type === 'image_to_pdf'}}">图片转 PDF</text>
+          <text wx:elif="{{item.type === 'office_to_pdf'}}">Word 转 PDF</text>
+          <text wx:elif="{{item.type === 'character_card'}}">角色卡</text>
+          <text wx:else>{{item.type}}</text>
+        </view>
+        <view
+          class="task-card__badge {{item.status === 'succeeded' && item.resultExpired ? 'is-expired' : ''}} status-{{item.status}}"
+        >
+          <text wx:if="{{item.status === 'succeeded' && item.resultExpired}}">已过期</text>
+          <text wx:elif="{{item.status === 'succeeded'}}">成功</text>
+          <text wx:elif="{{item.status === 'failed'}}">失败</text>
+          <text wx:elif="{{item.status === 'running'}}">进行中</text>
+          <text wx:elif="{{item.status === 'queued'}}">排队中</text>
+          <text wx:elif="{{item.status === 'pending'}}">待处理</text>
+          <text wx:elif="{{item.status === 'cancelled'}}">已取消</text>
+          <text wx:else>{{item.status}}</text>
+        </view>
+      </view>
+
       <view class="task-card__body">
-        <view class="task-card__main">
-          <view class="task-card__type">
-            <text wx:if="{{item.type === 'pdf_compress'}}">PDF 压缩</text>
-            <text wx:elif="{{item.type === 'pdf_merge'}}">PDF 合并</text>
-            <text wx:elif="{{item.type === 'image_to_pdf'}}">图片转 PDF</text>
-            <text wx:elif="{{item.type === 'office_to_pdf'}}">Word 转 PDF</text>
-            <text wx:elif="{{item.type === 'character_card'}}">角色卡</text>
-            <text wx:else>{{item.type}}</text>
-          </view>
-          <view class="task-card__file" wx:if="{{item.filename}}">{{item.filename}}</view>
-          <view class="task-card__meta">
-            <text wx:if="{{item.sizeLabel}}">{{item.sizeLabel}}</text>
-            <text wx:if="{{item.sizeLabel}}"> · </text>
-            <text>进度 {{item.progress}}%</text>
-            <text wx:if="{{item.costQuota}}"> · 扣 {{item.costQuota}} 点</text>
-          </view>
-          <view class="task-card__err" wx:if="{{item.status === 'failed' && item.userMsg}}">{{item.userMsg}}</view>
-          <view class="task-card__err" wx:elif="{{item.resultExpired}}">已过期，请重新处理</view>
+        <view class="task-card__file" wx:if="{{item.filename}}">{{item.filename}}</view>
+        <view class="task-card__progress">
+          <progress
+            class="task-card__bar"
+            percent="{{item.progress}}"
+            stroke-width="6"
+            border-radius="6"
+            activeColor="{{item.status === 'failed' ? '#ef4444' : (item.resultExpired ? '#f97316' : '#3b82f6')}}"
+            backgroundColor="#eef0f3"
+          />
+          <text class="task-card__pct">{{item.progress}}%</text>
         </view>
-        <view class="task-card__aside">
-          <view class="task-card__status status-{{item.status}}">
-            <text wx:if="{{item.status === 'succeeded' && item.resultExpired}}">已过期</text>
-            <text wx:elif="{{item.status === 'succeeded'}}">成功</text>
-            <text wx:elif="{{item.status === 'failed'}}">失败</text>
-            <text wx:elif="{{item.status === 'running'}}">进行中</text>
-            <text wx:elif="{{item.status === 'queued'}}">排队中</text>
-            <text wx:elif="{{item.status === 'pending'}}">待处理</text>
-            <text wx:elif="{{item.status === 'cancelled'}}">已取消</text>
-            <text wx:else>{{item.status}}</text>
-          </view>
-          <button
-            class="task-card__btn {{item.canDownload ? 'task-card__btn--active' : 'task-card__btn--disabled'}}"
-            data-id="{{item.taskId}}"
-            bindtap="onDownload"
-            disabled="{{!item.canDownload}}"
-          >下载 PDF</button>
-          <button
-            wx:if="{{item.canRetry}}"
-            class="task-card__btn task-card__btn--ghost"
-            data-id="{{item.taskId}}"
-            bindtap="onRetry"
-            disabled="{{busyId === item.taskId}}"
-          >重试</button>
-          <button
-            wx:if="{{item.status === 'queued' || item.status === 'running' || item.status === 'pending'}}"
-            class="task-card__btn task-card__btn--ghost"
-            data-id="{{item.taskId}}"
-            bindtap="onCancel"
-            disabled="{{busyId === item.taskId}}"
-          >取消</button>
-          <button
-            class="task-card__btn task-card__btn--danger"
-            data-id="{{item.taskId}}"
-            bindtap="onDelete"
-            disabled="{{busyId === item.taskId}}"
-          >删除</button>
+        <view class="task-card__meta" wx:if="{{item.sizeLabel || item.costQuota}}">
+          <text wx:if="{{item.sizeLabel}}">{{item.sizeLabel}}</text>
+          <text wx:if="{{item.sizeLabel && item.costQuota}}"> · </text>
+          <text wx:if="{{item.costQuota}}">扣 {{item.costQuota}} 点</text>
         </view>
+        <view class="task-card__err" wx:if="{{item.status === 'failed' && item.userMsg}}">{{item.userMsg}}</view>
+        <view class="task-card__err" wx:elif="{{item.resultExpired}}">已过期，请重新处理</view>
+      </view>
+
+      <view class="task-card__actions">
+        <button
+          class="task-card__btn task-card__btn--primary {{item.canDownload ? '' : 'is-disabled'}}"
+          data-id="{{item.taskId}}"
+          bindtap="onDownload"
+          disabled="{{!item.canDownload}}"
+        >下载 PDF</button>
+        <button
+          wx:if="{{item.canRetry}}"
+          class="task-card__btn task-card__btn--outline"
+          data-id="{{item.taskId}}"
+          bindtap="onRetry"
+          disabled="{{busyId === item.taskId}}"
+        >重试</button>
+        <button
+          wx:if="{{item.status === 'queued' || item.status === 'running' || item.status === 'pending'}}"
+          class="task-card__btn task-card__btn--outline"
+          data-id="{{item.taskId}}"
+          bindtap="onCancel"
+          disabled="{{busyId === item.taskId}}"
+        >取消</button>
+        <button
+          class="task-card__btn task-card__btn--text"
+          data-id="{{item.taskId}}"
+          bindtap="onDelete"
+          disabled="{{busyId === item.taskId}}"
+        >删除</button>
       </view>
     </view>
   </block>

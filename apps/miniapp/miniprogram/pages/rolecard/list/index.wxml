@@ -1,0 +1,36 @@
+<view class="oc-page cards-page">
+  <view class="top-bar">
+    <button class="create-btn" bindtap="goCreate">新建角色卡</button>
+  </view>
+  <view class="oc-hint top-hint">作品库：保存人设草稿 + 已渲染的角色卡图片。预览图为成品缩略图。</view>
+
+  <view class="empty-card" wx:if="{{items.length === 0}}">
+    <view class="empty-card__icon">🎴</view>
+    <view class="empty-card__text">角色卡集是空的</view>
+    <view class="oc-hint">先写人设草稿，再生成角色卡图片</view>
+  </view>
+
+  <view class="list" wx:else>
+    <view class="item" wx:for="{{items}}" wx:key="id">
+      <view class="item__cover" bindtap="onPreview" data-path="{{item.cardImagePath}}" data-ready="{{item.hasCardImage}}">
+        <image
+          wx:if="{{item.hasCardImage}}"
+          class="item__img"
+          src="{{item.cardImagePath}}"
+          mode="aspectFill"
+        />
+        <view wx:else class="item__placeholder">
+          <view class="item__placeholder-title">{{item.name || '未命名'}}</view>
+          <view class="item__placeholder-sub">仅有文字草稿 · 尚未生成角色卡</view>
+        </view>
+        <view class="item__badge {{item.hasCardImage ? 'is-ready' : 'is-draft'}}">{{item.statusLabel}}</view>
+      </view>
+      <view class="item__name">{{item.name || '未命名角色'}}</view>
+      <view class="item__meta" wx:if="{{item.title}}">{{item.title}}</view>
+      <view class="item__actions">
+        <button class="item__btn item__btn--edit" data-id="{{item.id}}" bindtap="onEdit">编辑</button>
+        <button class="item__btn item__btn--del" data-id="{{item.id}}" bindtap="onDelete">删除</button>
+      </view>
+    </view>
+  </view>
+</view>

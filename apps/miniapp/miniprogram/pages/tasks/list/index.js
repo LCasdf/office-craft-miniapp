@@ -16,7 +16,7 @@ function decorate(items) {
 }
 
 Page({
-  data: { items: [], loading: false, error: "", busyId: "" },
+  data: { items: [], loading: false, error: "", busyId: "", clearing: false },
   _timer: null,
   onShow() {
     this.loadTasks(true);
@@ -85,7 +85,7 @@ Page({
   },
   onDelete(e) {
     const taskId = e.currentTarget.dataset.id;
-    if (!taskId || this.data.busyId) return;
+    if (!taskId || this.data.busyId || this.data.clearing) return;
     wx.showModal({
       title: "删除任务",
       content: "删除后无法从任务中心找回，确认删除？",
@@ -106,6 +106,34 @@ Page({
           })
           .catch(() => wx.showToast({ title: "删除失败", icon: "none" }))
           .finally(() => this.setData({ busyId: "" }));
+      },
+    });
+  },
+  onClear() {
+    if (this.data.clearing || this.data.busyId || !this.data.items.length) return;
+    wx.showModal({
+      title: "清空任务",
+      content: "将删除全部任务；进行中的会返还预扣额度，且无法找回。确认清空？",
+      confirmColor: "#ef4444",
+      success: (res) => {
+        if (!res.confirm) return;
+        this.setData({ clearing: true });
+        this._stopPoll();
+        request({ url: "/v1/tasks", method: "DELETE" })
+          .then((body) => {
+            if (body.code !== 0) {
+              wx.showToast({ title: body.user_msg || "清空失败", icon: "none" });
+              this.loadTasks(false);
+              return;
+            }
+            this.setData({ items: [] });
+            wx.showToast({ title: body.user_msg || "已清空", icon: "success" });
+          })
+          .catch(() => {
+            wx.showToast({ title: "清空失败", icon: "none" });
+            this.loadTasks(false);
+          })
+          .finally(() => this.setData({ clearing: false }));
       },
     });
   },
@@ -142,15 +170,25 @@ Page({
           return;
         }
         const url = body.data && body.data.downloadUrl;
+        const filename = (body.data && body.data.filename) || "";
         if (!url) {
           wx.showToast({ title: "暂无下载地址", icon: "none" });
           return;
         }
+        const isPng = /\.png$/i.test(filename) || /\.png(\?|$)/i.test(url);
         wx.downloadFile({
           url,
           success: (res) => {
             if (res.statusCode !== 200) {
               wx.showToast({ title: "下载失败", icon: "none" });
+              return;
+            }
+            if (isPng) {
+              wx.previewImage({
+                urls: [res.tempFilePath],
+                current: res.tempFilePath,
+                fail: () => wx.showToast({ title: "无法预览图片", icon: "none" }),
+              });
               return;
             }
             wx.openDocument({
