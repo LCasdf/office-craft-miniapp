@@ -25,6 +25,24 @@ def test_merge_two_pdfs(tmp_path: Path):
     assert len(PdfReader(dest).pages) == 3
 
 
+def test_merge_timeout(tmp_path: Path, monkeypatch):
+    import time
+
+    import oc_core.converters.pdf as pdf_mod
+
+    a = _blank(tmp_path / "a.pdf")
+    b = _blank(tmp_path / "b.pdf")
+
+    def slow_write(*_a, **_k):
+        time.sleep(2)
+        raise AssertionError("should have timed out")
+
+    monkeypatch.setattr(pdf_mod.PdfWriter, "write", slow_write)
+    with pytest.raises(PdfError) as ei:
+        merge_pdfs([a, b], tmp_path / "out.pdf", timeout_sec=1)
+    assert ei.value.kind == "timeout"
+
+
 def test_merge_encrypted_raises(tmp_path: Path):
     a = _blank(tmp_path / "a.pdf")
     b = _blank(tmp_path / "b.pdf", encrypt="secret")

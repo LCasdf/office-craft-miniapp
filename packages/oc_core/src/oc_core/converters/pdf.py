@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeout
 from pathlib import Path
 
 from pypdf import PdfReader, PdfWriter
@@ -73,20 +75,40 @@ def compress_pdf(
     return dest
 
 
-def merge_pdfs(paths: list[Path], dest: Path, *, max_pages: int = 200) -> Path:
+def merge_pdfs(
+    paths: list[Path],
+    dest: Path,
+    *,
+    max_pages: int = 200,
+    timeout_sec: int = 120,
+) -> Path:
     if len(paths) < 2:
         raise PdfError("merge needs at least 2 files", kind="invalid")
-    writer = PdfWriter()
-    total = 0
-    for p in paths:
-        reader = open_pdf(p)
-        n = len(reader.pages)
-        total += n
-        if total > max_pages:
-            raise PdfError(f"total pages exceed {max_pages}", kind="too_many_pages")
-        for page in reader.pages:
-            writer.add_page(page)
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    with dest.open("wb") as f:
-        writer.write(f)
-    return dest
+
+    def _do() -> Path:
+        writer = PdfWriter()
+        total = 0
+        for p in paths:
+            reader = open_pdf(p)
+            n = len(reader.pages)
+            total += n
+            if total > max_pages:
+                raise PdfError(f"total pages exceed {max_pages}", kind="too_many_pages")
+            for page in reader.pages:
+                writer.add_page(page)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        with dest.open("wb") as f:
+            writer.write(f)
+        return dest
+
+    # ponytail: thread join can't kill native hangs; ceiling=timeout_sec → process isolate
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        fut = pool.submit(_do)
+        try:
+            return fut.result(timeout=timeout_sec)
+        except FuturesTimeout as e:
+            raise PdfError("pdf merge timeout", kind="timeout") from e
+        except PdfError:
+            raise
+        except Exception as e:
+            raise PdfError(str(e) or "merge failed", kind="invalid") from e

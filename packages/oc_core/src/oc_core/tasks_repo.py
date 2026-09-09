@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from oc_shared.constants import OUTPUT_TTL_SECONDS
+from oc_shared.constants import OUTPUT_TTL_SECONDS, TASK_PROGRESS_STALL_SECONDS
 from oc_shared.enums import ErrorClass, TaskStatus
 from oc_shared.error_codes import ErrorCode
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from oc_core.models import Task
@@ -37,13 +37,17 @@ def get_by_public_id(
     return session.scalar(stmt)
 
 
-def list_for_user(session: Session, user_id: int, *, limit: int = 20) -> list[Task]:
-    stmt = (
-        select(Task)
-        .where(Task.user_id == user_id)
-        .order_by(Task.id.desc())
-        .limit(limit)
-    )
+def list_for_user(
+    session: Session,
+    user_id: int,
+    *,
+    limit: int = 20,
+    exclude_types: tuple[str, ...] | None = None,
+) -> list[Task]:
+    stmt = select(Task).where(Task.user_id == user_id)
+    if exclude_types:
+        stmt = stmt.where(Task.type.not_in(exclude_types))
+    stmt = stmt.order_by(Task.id.desc()).limit(limit)
     return list(session.scalars(stmt))
 
 
@@ -59,6 +63,26 @@ def delete_for_user(session: Session, public_id: str, *, user_id: int) -> bool:
         apply_refund(q, task)
     session.delete(task)
     return True
+
+
+def delete_all_for_user(session: Session, user_id: int) -> int:
+    """Hard-delete all tasks for user. Refunds unsettled freezes. Returns count."""
+    from oc_core.quota import SETTLED_FROZEN, apply_refund, get_or_create_quota
+
+    tasks = list(
+        session.scalars(select(Task).where(Task.user_id == user_id))
+    )
+    if not tasks:
+        return 0
+    q = None
+    for task in tasks:
+        if task.quota_settled == SETTLED_FROZEN and (task.cost_quota or 0) > 0:
+            if q is None:
+                q = get_or_create_quota(session, user_id)
+            apply_refund(q, task)
+        session.delete(task)
+    session.flush()
+    return len(tasks)
 
 
 def create_task_row(
@@ -212,25 +236,48 @@ def prepare_retry(task: Task, *, timeout_at: datetime) -> None:
     task.output_meta = None
 
 
+def bump_progress(session: Session, public_id: str, progress: int) -> bool:
+    """Advance progress for a non-terminal task (also refreshes updated_at)."""
+    task = get_by_public_id(session, public_id)
+    if task is None:
+        return False
+    if task.status in (
+        TaskStatus.SUCCEEDED.value,
+        TaskStatus.FAILED.value,
+        TaskStatus.CANCELLED.value,
+    ):
+        return False
+    task.progress = max(int(task.progress or 0), min(99, int(progress)))
+    return True
+
+
 def sweep_timed_out_tasks(session: Session, *, limit: int = 100) -> int:
     """
-    Mark overdue queued/running tasks as timeout failed.
+    Mark overdue / stalled queued|running tasks as timeout failed.
+    - timeout_at exceeded
+    - running stuck at ≤20% with no writeback for TASK_PROGRESS_STALL_SECONDS
     Caller should settle quota (refund) after.
     """
     now = _now()
+    stall_before = now - timedelta(seconds=TASK_PROGRESS_STALL_SECONDS)
+    active = (
+        TaskStatus.PENDING.value,
+        TaskStatus.QUEUED.value,
+        TaskStatus.RUNNING.value,
+    )
     tasks = list(
         session.scalars(
             select(Task)
             .where(
-                Task.status.in_(
-                    (
-                        TaskStatus.PENDING.value,
-                        TaskStatus.QUEUED.value,
-                        TaskStatus.RUNNING.value,
-                    )
+                Task.status.in_(active),
+                or_(
+                    and_(Task.timeout_at.is_not(None), Task.timeout_at < now),
+                    and_(
+                        Task.status == TaskStatus.RUNNING.value,
+                        Task.progress <= 20,
+                        Task.updated_at < stall_before,
+                    ),
                 ),
-                Task.timeout_at.is_not(None),
-                Task.timeout_at < now,
             )
             .order_by(Task.id.asc())
             .limit(limit)
@@ -239,11 +286,16 @@ def sweep_timed_out_tasks(session: Session, *, limit: int = 100) -> int:
     n = 0
     err = ErrorCode.TASK_TIMEOUT.defn
     for task in tasks:
+        detail = (
+            "progress stall"
+            if task.timeout_at is None or task.timeout_at >= now
+            else "timeout_at exceeded"
+        )
         apply_failed(
             task,
             error_code=err.code,
             error_class=ErrorClass.TIMEOUT.value,
-            error_detail="timeout_at exceeded",
+            error_detail=detail,
             user_msg=err.user_msg,
         )
         n += 1

@@ -28,6 +28,22 @@ def test_wx_login_stub():
     assert body["data"]["accessToken"]
 
 
+def test_wx_login_empty_code():
+    r = client.post("/v1/auth/wx-login", json={"code": "  "})
+    assert r.json()["code"] == 40001
+
+
+def test_auth_refresh():
+    r = client.post("/v1/auth/refresh", json={"refreshToken": "dev_refresh_token"})
+    assert r.json()["code"] == 0
+    assert "accessToken" in r.json()["data"]
+
+
+def test_auth_refresh_empty():
+    r = client.post("/v1/auth/refresh", json={"refreshToken": ""})
+    assert r.json()["code"] == 41001
+
+
 def test_create_task_requires_idempotency_key():
     r = client.post("/v1/tasks", json={"type": "pdf_compress", "inputs": []})
     assert r.status_code == 200

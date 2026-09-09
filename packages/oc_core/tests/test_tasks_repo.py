@@ -69,6 +69,20 @@ def test_delete_for_user():
     assert delete_for_user(session, "missing", user_id=0) is False
 
 
+def test_delete_all_for_user():
+    from oc_core.tasks_repo import delete_all_for_user
+
+    session = MagicMock()
+    t1 = Task(public_id="a", user_id=0, type="pdf_compress", status="failed", cost_quota=0)
+    t2 = Task(public_id="b", user_id=0, type="pdf_merge", status="succeeded", cost_quota=0)
+    session.scalars.return_value = [t1, t2]
+    assert delete_all_for_user(session, 0) == 2
+    assert session.delete.call_count == 2
+    session.flush.assert_called_once()
+    session.scalars.return_value = []
+    assert delete_all_for_user(session, 0) == 0
+
+
 def test_is_retryable_rules():
     base = dict(public_id="r1", user_id=0, type="pdf_compress")
     ok = Task(
@@ -139,6 +153,7 @@ def test_sweep_timed_out_tasks():
         progress=50,
         timeout_at=now - timedelta(seconds=1),
         quota_settled=0,
+        updated_at=now,
     )
     session = MagicMock()
     result = MagicMock()
@@ -158,3 +173,35 @@ def test_sweep_timed_out_tasks():
     assert overdue.status == TaskStatus.FAILED.value
     assert overdue.error_code == ErrorCode.TASK_TIMEOUT.defn.code
     assert overdue.error_class == ErrorClass.TIMEOUT.value
+
+
+def test_sweep_progress_stall():
+    now = datetime(2026, 9, 8, 12, 0, 0)
+    stalled = Task(
+        id=2,
+        public_id="st1",
+        user_id=0,
+        type="pdf_merge",
+        status=TaskStatus.RUNNING.value,
+        progress=20,
+        timeout_at=now + timedelta(hours=1),
+        quota_settled=0,
+        updated_at=now - timedelta(seconds=120),
+    )
+    session = MagicMock()
+    result = MagicMock()
+    result.__iter__ = lambda self: iter([stalled])
+    session.scalars.return_value = result
+
+    import oc_core.tasks_repo as repo
+
+    orig = repo._now
+    repo._now = lambda: now
+    try:
+        n = sweep_timed_out_tasks(session)
+    finally:
+        repo._now = orig
+
+    assert n == 1
+    assert stalled.status == TaskStatus.FAILED.value
+    assert stalled.error_detail == "progress stall"

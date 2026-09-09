@@ -33,6 +33,9 @@ TASK_TIMEOUTS: dict[str, int] = {
     "novel_chapter": 120,
 }
 
+# Running/queued with no progress writeback longer than this → fail as timeout (53001)
+TASK_PROGRESS_STALL_SECONDS = 90
+
 # Default quota costs
 TASK_COST_QUOTA: dict[str, int] = {
     "image_to_pdf": 1,

@@ -43,6 +43,7 @@ class ErrorCode(Enum):
     )
     RESULT_EXPIRED = ErrorDef(40016, "result_expired", "已过期，请重新处理", 400)
     RESULT_NOT_READY = ErrorDef(40017, "result_not_ready", "任务未完成，暂不可下载", 400)
+    QUEUE_OVERLOADED = ErrorDef(40018, "queue_overloaded", "系统繁忙，请稍后再试", 503)
     RATE_LIMITED = ErrorDef(40029, "rate_limited", "请求过于频繁，请稍后再试", 429)
     UNAUTHORIZED = ErrorDef(41001, "unauthorized", "登录已失效，请重新登录", 401)
     WX_LOGIN_FAILED = ErrorDef(41002, "wx_login_failed", "登录失败，请稍后重试", 401)

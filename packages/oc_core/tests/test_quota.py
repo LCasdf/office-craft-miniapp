@@ -1,5 +1,6 @@
 from datetime import date
 
+import pytest
 from oc_core.models import Quota, Task
 from oc_core.quota import (
     SETTLED_CHARGED,
@@ -13,7 +14,6 @@ from oc_core.quota import (
     settle_terminal_task,
 )
 from oc_shared.enums import ErrorClass, TaskStatus
-import pytest
 
 
 def _quota(**kwargs) -> Quota:

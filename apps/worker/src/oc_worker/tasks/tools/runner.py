@@ -7,11 +7,11 @@ from collections.abc import Callable
 from pathlib import Path
 
 import structlog
+from oc_core.cleanup import delete_task_input_objects
 from oc_core.config import get_settings
 from oc_core.db import session_scope
 from oc_core.storage import get_bytes, put_bytes, result_object_key
-from oc_core.tasks_repo import mark_failed, mark_running, mark_succeeded
-from oc_core.cleanup import delete_task_input_objects
+from oc_core.tasks_repo import bump_progress, mark_failed, mark_running, mark_succeeded
 from oc_shared.enums import ErrorClass, TaskStatus
 from oc_shared.error_codes import ErrorCode
 
@@ -41,6 +41,11 @@ def _mark_timeout(task_id: str, detail: str) -> dict:
             user_msg=err.user_msg,
         )
     return {"taskId": task_id, "status": "failed", "errorCode": err.code}
+
+
+def _bump(task_id: str, progress: int) -> None:
+    with session_scope() as session:
+        bump_progress(session, task_id, progress)
 
 
 def run_file_tool(
@@ -79,6 +84,7 @@ def run_file_tool(
         with tempfile.TemporaryDirectory(prefix="oc_tool_") as tmp:
             tmp_path = Path(tmp)
             local_files: list[Path] = []
+            n_in = len(inputs)
             for i, item in enumerate(inputs):
                 key = item.get("cosKey") or item.get("cos_key")
                 if not key:
@@ -87,10 +93,14 @@ def run_file_tool(
                 dest = tmp_path / f"{i}_{name}"
                 dest.write_bytes(get_bytes(key))
                 local_files.append(dest)
+                # 20 → 50 while downloading
+                _bump(task_id, 20 + int(30 * (i + 1) / n_in))
 
+            _bump(task_id, 55)
             out_pdf = convert(tmp_path, {"files": local_files, "params": params})
             if not out_pdf.is_file():
                 raise RuntimeError("converter produced no file")
+            _bump(task_id, 85)
             data = out_pdf.read_bytes()
             cos_key = result_object_key(
                 env=env, user_id=user_id, task_id=task_id, filename=result_filename
@@ -123,7 +133,11 @@ def run_file_tool(
                 session,
                 task_id,
                 error_code=e.code.defn.code,
-                error_class=ErrorClass.USER.value,
+                error_class=(
+                    ErrorClass.TIMEOUT.value
+                    if e.code == ErrorCode.TASK_TIMEOUT
+                    else ErrorClass.USER.value
+                ),
                 error_detail=e.detail,
                 user_msg=e.user_msg,
             )

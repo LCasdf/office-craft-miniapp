@@ -122,8 +122,11 @@ def _merge_pdfs(tmp: Path, ctx: dict) -> Path:
         total += size
     if total > PDF_MERGE_MAX_TOTAL_BYTES:
         raise UserFacingError(ErrorCode.FILE_TOO_LARGE, "total too large")
+    timeout = TASK_TIMEOUTS.get("pdf_merge", DEFAULT_TASK_TIMEOUT_SECONDS)
     try:
-        return merge_pdfs(files, tmp / "result.pdf", max_pages=PDF_MERGE_MAX_PAGES)
+        return merge_pdfs(
+            files, tmp / "result.pdf", max_pages=PDF_MERGE_MAX_PAGES, timeout_sec=timeout
+        )
     except PdfError as e:
         _raise_pdf(e)
         raise
