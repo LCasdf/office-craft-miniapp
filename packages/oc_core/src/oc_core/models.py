@@ -92,3 +92,32 @@ class Task(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False), server_default=func.now(), onupdate=func.now()
     )
+
+
+class CharacterCard(Base):
+    """M2a role card — simplified vs full DDL (no assets/ai_sessions FK)."""
+
+    __tablename__ = "character_cards"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "idempotency_key", name="uk_character_cards_user_idempotency"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(26), unique=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(128), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(16), nullable=False, default="1")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    payload_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+    cover_cos_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=False), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=False), server_default=func.now(), onupdate=func.now()
+    )
