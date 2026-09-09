@@ -23,12 +23,14 @@ from oc_core.storage import presign_get
 from oc_core.tasks_repo import (
     DEV_USER_ID,
     create_task_row,
+    delete_all_for_user,
     delete_for_user,
     get_by_idempotency,
     get_by_public_id,
     is_retryable,
     list_for_user,
     prepare_retry,
+    sweep_timed_out_tasks,
     task_to_detail,
     task_to_list_item,
 )
@@ -190,12 +192,30 @@ def _enqueue(task_type: TaskType, task_id: str, request_id: str) -> None:
             queue="q.tools",
         )
         return
+    if task_type == TaskType.CHARACTER_CARD:
+        from oc_worker.tasks.ai.character_card import character_card_task
+
+        character_card_task.apply_async(
+            kwargs={"task_id": task_id, "request_id": request_id},
+            queue="q.ai",
+        )
+        return
     from oc_worker.tasks.ping import ping_task
 
     ping_task.apply_async(
         kwargs={"task_id": task_id, "request_id": request_id},
         queue="q.tools",
     )
+
+
+def _queue_overloaded() -> bool:
+    """Reject create when tools queue depth hits configured max (G1 overload)."""
+    from oc_core.alerts import queue_depth
+
+    settings = get_settings()
+    max_depth = int(settings.alert_queue_depth_max or 100)
+    depth = queue_depth("q.tools")
+    return depth >= 0 and depth >= max_depth
 
 
 @router.post("")
@@ -208,6 +228,10 @@ def create_task(
     request_id = getattr(request.state, "request_id", "unknown")
     if not idempotency_key:
         err = ErrorCode.IDEMPOTENCY_REQUIRED.defn
+        return envelope_err(err.code, err.message, err.user_msg, request_id)
+
+    if _queue_overloaded():
+        err = ErrorCode.QUEUE_OVERLOADED.defn
         return envelope_err(err.code, err.message, err.user_msg, request_id)
 
     bad = _validate_inputs(body)
@@ -298,8 +322,18 @@ def list_tasks(request: Request, cursor: str | None = None, limit: int = 20):
     limit = max(1, min(limit, 50))
     try:
         with session_scope() as session:
+            # Fail stuck tasks on poll so UI doesn't wait for Beat
+            sweep_timed_out_tasks(session)
             settle_unsettled_for_user(session, DEV_USER_ID)
-            items = [task_to_list_item(t) for t in list_for_user(session, DEV_USER_ID, limit=limit)]
+            items = [
+                task_to_list_item(t)
+                for t in list_for_user(
+                    session,
+                    DEV_USER_ID,
+                    limit=limit,
+                    exclude_types=("character_card",),
+                )
+            ]
     except Exception:
         err = ErrorCode.INTERNAL_ERROR.defn
         return envelope_err(err.code, err.message, err.user_msg, request_id)
@@ -458,6 +492,23 @@ def download_task(task_id: str, request: Request):
         err = ErrorCode.INTERNAL_ERROR.defn
         return envelope_err(err.code, err.message, err.user_msg, request_id)
     return envelope_ok(data, request_id, task_id=task_id)
+
+
+@router.delete("")
+def clear_tasks(request: Request):
+    """Clear all tasks for current user (hard delete; refunds unsettled freezes)."""
+    request_id = getattr(request.state, "request_id", "unknown")
+    try:
+        with session_scope() as session:
+            deleted = delete_all_for_user(session, DEV_USER_ID)
+    except Exception:
+        err = ErrorCode.INTERNAL_ERROR.defn
+        return envelope_err(err.code, err.message, err.user_msg, request_id)
+    return envelope_ok(
+        {"deleted": deleted},
+        request_id,
+        user_msg="已清空任务" if deleted else "暂无任务",
+    )
 
 
 @router.delete("/{task_id}")
