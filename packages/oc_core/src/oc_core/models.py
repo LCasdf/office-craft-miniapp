@@ -121,3 +121,32 @@ class CharacterCard(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=False), server_default=func.now(), onupdate=func.now()
     )
+
+
+class PptOutline(Base):
+    """M2b PPT outline — topic + pages JSON with optimistic lock."""
+
+    __tablename__ = "ppt_outlines"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "idempotency_key", name="uk_ppt_outlines_user_idempotency"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(26), unique=True, nullable=False)
+    user_id: Mapped[int] = mapped_column(BigInteger, nullable=False, index=True)
+    topic: Mapped[str] = mapped_column(String(200), nullable=False)
+    template_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(16), nullable=False, default="1")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    pages_json: Mapped[list] = mapped_column(JSON, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
+    idempotency_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=False), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=False), server_default=func.now(), onupdate=func.now()
+    )

@@ -8,7 +8,8 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from oc_core.ai.character_card_schema import validate_and_normalize
-from oc_core.ai.prompts import CHARACTER_CARD_PROMPT_VERSION
+from oc_core.ai.ppt_outline_schema import mock_outline_pages, normalize_pages
+from oc_core.ai.prompts import CHARACTER_CARD_PROMPT_VERSION, PPT_OUTLINE_PROMPT_VERSION
 
 
 @dataclass(slots=True)
@@ -38,6 +39,15 @@ def _extract_premise(messages: list[dict[str, str]]) -> str:
     return text[:2000]
 
 
+def _extract_topic_and_pages(messages: list[dict[str, str]]) -> tuple[str, int]:
+    last = messages[-1]["content"] if messages else ""
+    tm = re.search(r"Topic:\n(.*?)(?:\nPage count:|\Z)", last, re.S)
+    topic = (tm.group(1) if tm else last).strip()[:200]
+    pm = re.search(r"Page count:\s*(\d+)", last)
+    n = int(pm.group(1)) if pm else 8
+    return topic, n
+
+
 def _mock_character_card(premise: str) -> dict[str, Any]:
     token = (re.split(r"[\s，,、]", premise) or ["旅人"])[0][:8] or "旅人"
     return validate_and_normalize(
@@ -55,7 +65,7 @@ def _mock_character_card(premise: str) -> dict[str, Any]:
 
 
 class MockAIClient:
-    """MVP — returns schema-valid character-card JSON when asked."""
+    """MVP — schema-valid JSON for character-card / ppt-outline."""
 
     def complete(
         self,
@@ -69,6 +79,17 @@ class MockAIClient:
         sys = " ".join(
             (m.get("content") or "") for m in messages if m.get("role") == "system"
         )
+        if purpose == "ppt_outline" or "presentation outline" in sys.lower():
+            topic, n = _extract_topic_and_pages(messages)
+            pages = mock_outline_pages(topic, n)
+            payload = {"pages": pages}
+            return AIResult(
+                content=json.dumps(payload, ensure_ascii=False),
+                prompt_tokens=len(topic) // 2 + 20,
+                completion_tokens=60,
+                provider="mock",
+                model=model or "mock",
+            )
         if purpose == "character_card" or "avatarDesc" in sys or "character-card" in sys.lower():
             premise = _extract_premise(messages)
             payload = _mock_character_card(premise)
@@ -94,6 +115,13 @@ def parse_character_card_content(content: str) -> dict[str, Any]:
     return validate_and_normalize(data)
 
 
+def parse_ppt_outline_content(content: str) -> list[dict[str, Any]]:
+    data = json.loads(content)
+    if isinstance(data, list):
+        return normalize_pages(data)
+    return normalize_pages(data.get("pages"))
+
+
 def build_ai_client(provider: str = "mock") -> AIClient:
     if provider == "mock":
         return MockAIClient()
@@ -106,5 +134,7 @@ __all__ = [
     "MockAIClient",
     "build_ai_client",
     "parse_character_card_content",
+    "parse_ppt_outline_content",
     "CHARACTER_CARD_PROMPT_VERSION",
+    "PPT_OUTLINE_PROMPT_VERSION",
 ]
