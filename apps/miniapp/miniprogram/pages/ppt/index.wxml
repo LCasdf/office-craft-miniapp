@@ -1,0 +1,174 @@
+<view class="ppt-page">
+  <!-- Hero -->
+  <view class="ppt-hero">
+    <view class="ppt-hero__eyebrow">TECH TOOL</view>
+    <view class="ppt-hero__title">PPT大纲生成器</view>
+    <view class="ppt-hero__sub">输入主题，自动生成结构化演示大纲</view>
+    <view class="ppt-steps">
+      <view class="ppt-steps__item {{hasOutline ? '' : 'is-active'}}">
+        <text class="ppt-steps__num">1</text>
+        <text class="ppt-steps__label">输入主题</text>
+      </view>
+      <view class="ppt-steps__line"></view>
+      <view class="ppt-steps__item {{hasOutline ? 'is-active' : ''}}">
+        <text class="ppt-steps__num">2</text>
+        <text class="ppt-steps__label">生成大纲</text>
+      </view>
+      <view class="ppt-steps__line"></view>
+      <view class="ppt-steps__item">
+        <text class="ppt-steps__num">3</text>
+        <text class="ppt-steps__label">预览导出</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- Input -->
+  <view class="ppt-card">
+    <view class="ppt-card__head">
+      <view class="ppt-card__title">主题</view>
+      <view class="ppt-card__hint">一句话说明你要讲什么</view>
+    </view>
+    <textarea
+      class="ppt-topic"
+      maxlength="200"
+      auto-height
+      placeholder="请输入PPT主题"
+      placeholder-class="ppt-topic__ph"
+      value="{{topic}}"
+      bindinput="onTopic"
+    />
+  </view>
+
+  <!-- Params -->
+  <view class="ppt-card">
+    <view class="ppt-card__head">
+      <view class="ppt-card__title">参数配置</view>
+      <view class="ppt-card__hint">可按场景微调</view>
+    </view>
+
+    <view class="ppt-param">
+      <view class="ppt-param__label">页数</view>
+      <view class="ppt-param__row">
+        <view class="ppt-stepper" bindtap="onPageCountDec">−</view>
+        <view class="ppt-stepper__value">{{pageCount}}</view>
+        <view class="ppt-stepper" bindtap="onPageCountInc">+</view>
+        <view class="ppt-param__note">建议 5–15 页</view>
+      </view>
+    </view>
+
+    <view class="ppt-param">
+      <view class="ppt-param__label">受众</view>
+      <scroll-view scroll-x class="ppt-chips" enable-flex>
+        <view
+          wx:for="{{audienceOptions}}"
+          wx:key="*this"
+          class="ppt-chip {{audience === item ? 'is-on' : ''}}"
+          data-value="{{item}}"
+          bindtap="onPickAudience"
+        >{{item}}</view>
+      </scroll-view>
+      <input
+        class="ppt-field"
+        placeholder="或自定义受众，如：技术面试官"
+        value="{{audienceCustom}}"
+        bindinput="onAudienceCustom"
+      />
+    </view>
+
+    <view class="ppt-param ppt-param--last">
+      <view class="ppt-param__label">风格</view>
+      <view class="ppt-chips ppt-chips--wrap">
+        <view
+          wx:for="{{styleOptions}}"
+          wx:key="id"
+          class="ppt-chip {{styleId === item.id ? 'is-on' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="onPickStyle"
+        >{{item.label}}</view>
+      </view>
+    </view>
+  </view>
+
+  <button
+    class="ppt-btn-primary {{busy ? 'is-busy' : ''}}"
+    loading="{{busy && !hasOutline}}"
+    disabled="{{busy}}"
+    bindtap="onCreateOutline"
+  >{{hasOutline ? '重新生成大纲' : '生成大纲'}}</button>
+
+  <!-- Outline results -->
+  <block wx:if="{{hasOutline}}">
+    <view class="ppt-section-label">
+      <view class="ppt-section-label__title">大纲结果</view>
+      <view class="ppt-section-label__meta">共 {{pages.length}} 页 · 可点开编辑</view>
+    </view>
+
+    <view
+      wx:for="{{pages}}"
+      wx:key="index"
+      wx:for-index="idx"
+      class="ppt-outline-card {{expandedIndex === idx ? 'is-open' : ''}}"
+    >
+      <view class="ppt-outline-card__main" data-i="{{idx}}" bindtap="onTogglePage">
+        <view class="ppt-outline-card__idx">{{idx + 1}}</view>
+        <view class="ppt-outline-card__body">
+          <view class="ppt-outline-card__title">{{item.title || '未命名页面'}}</view>
+          <view class="ppt-outline-card__desc">{{item.summary}}</view>
+        </view>
+        <view class="ppt-outline-card__chev">{{expandedIndex === idx ? '收起' : '编辑'}}</view>
+      </view>
+      <view wx:if="{{expandedIndex === idx}}" class="ppt-outline-card__edit">
+        <input
+          class="ppt-field"
+          data-i="{{idx}}"
+          value="{{item.title}}"
+          bindinput="onPageTitle"
+          placeholder="页面标题"
+        />
+        <textarea
+          class="ppt-field ppt-field--area"
+          data-i="{{idx}}"
+          value="{{item.bulletsText}}"
+          bindinput="onPageBullets"
+          placeholder="每行一个要点"
+          maxlength="800"
+        />
+      </view>
+    </view>
+
+    <!-- Preview (secondary) -->
+    <view class="ppt-section-label ppt-section-label--preview">
+      <view class="ppt-section-label__title">幻灯片预览</view>
+      <view class="ppt-section-label__meta">示意版式，导出后为完整 pptx</view>
+    </view>
+    <scroll-view scroll-x class="ppt-preview" enable-flex show-scrollbar="{{false}}">
+      <view
+        wx:for="{{pages}}"
+        wx:key="index"
+        wx:for-index="idx"
+        class="ppt-slide {{previewIndex === idx ? 'is-focus' : ''}}"
+        data-i="{{idx}}"
+        bindtap="onFocusPreview"
+      >
+        <view class="ppt-slide__bar">
+          <text>P{{idx + 1}}</text>
+        </view>
+        <view class="ppt-slide__title">{{item.title}}</view>
+        <view class="ppt-slide__line" wx:for="{{item.previewBullets}}" wx:for-item="b" wx:key="*this">{{b}}</view>
+      </view>
+    </scroll-view>
+
+    <view class="ppt-footer-spacer"></view>
+  </block>
+
+  <!-- Sticky export -->
+  <view wx:if="{{hasOutline}}" class="ppt-dock">
+    <view class="ppt-dock__hint">确认大纲后导出 · 扣 5 点额度</view>
+    <button
+      class="ppt-btn-export"
+      loading="{{busy}}"
+      disabled="{{busy}}"
+      bindtap="onSaveAndGenerate"
+    >导出 PPT</button>
+  </view>
+</view>

@@ -35,6 +35,18 @@
     </view>
   </view>
 
+  <view class="section">
+    <view class="section__head">PPT</view>
+    <view class="module-card" hover-class="module-card--active" hover-stay-time="80" bindtap="goPpt">
+      <view class="module-card__icon">📊</view>
+      <view class="module-card__body">
+        <view class="module-card__name">PPT大纲生成器</view>
+        <view class="module-card__desc">输入主题 → 结构化大纲 → 导出 pptx</view>
+      </view>
+      <view class="module-card__arrow">›</view>
+    </view>
+  </view>
+
   <view class="nav-row">
     <button class="btn btn-ghost nav-btn" bindtap="goTasks">任务中心</button>
     <button class="btn btn-ghost nav-btn" bindtap="goMe">我的</button>

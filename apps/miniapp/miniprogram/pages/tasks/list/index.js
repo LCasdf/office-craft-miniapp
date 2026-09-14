@@ -5,14 +5,41 @@ const POLL_MS = 2000;
 const MAX_RETRY = 2;
 
 function decorate(items) {
-  return (items || []).map((t) => ({
-    ...t,
-    canRetry:
-      t.status === "failed" &&
-      t.errorClass !== "safety" &&
-      (t.retryCount || 0) < MAX_RETRY,
-    canDownload: t.status === "succeeded" && !t.resultExpired,
-  }));
+  return (items || []).map((t) => {
+    let downloadLabel = "下载";
+    if (t.type === "ppt_generate") downloadLabel = "下载 PPT";
+    else if (
+      t.type === "pdf_compress" ||
+      t.type === "pdf_merge" ||
+      t.type === "image_to_pdf" ||
+      t.type === "office_to_pdf"
+    ) {
+      downloadLabel = "下载 PDF";
+    } else if (t.type === "character_card") {
+      downloadLabel = "查看图片";
+    }
+    return {
+      ...t,
+      downloadLabel,
+      canRetry:
+        t.status === "failed" &&
+        t.errorClass !== "safety" &&
+        (t.retryCount || 0) < MAX_RETRY,
+      canDownload: t.status === "succeeded" && !t.resultExpired,
+    };
+  });
+}
+
+function openFileType(filename, url) {
+  const s = `${filename || ""} ${url || ""}`.toLowerCase();
+  if (/\.pptx(\?|$)/.test(s) || /\.pptx$/i.test(filename || "")) return "pptx";
+  if (/\.ppt(\?|$)/.test(s)) return "ppt";
+  if (/\.docx(\?|$)/.test(s)) return "docx";
+  if (/\.doc(\?|$)/.test(s)) return "doc";
+  if (/\.xlsx(\?|$)/.test(s)) return "xlsx";
+  if (/\.xls(\?|$)/.test(s)) return "xls";
+  if (/\.png(\?|$)/.test(s)) return "png";
+  return "pdf";
 }
 
 Page({
@@ -175,7 +202,7 @@ Page({
           wx.showToast({ title: "暂无下载地址", icon: "none" });
           return;
         }
-        const isPng = /\.png$/i.test(filename) || /\.png(\?|$)/i.test(url);
+        const kind = openFileType(filename, url);
         wx.downloadFile({
           url,
           success: (res) => {
@@ -183,7 +210,7 @@ Page({
               wx.showToast({ title: "下载失败", icon: "none" });
               return;
             }
-            if (isPng) {
+            if (kind === "png") {
               wx.previewImage({
                 urls: [res.tempFilePath],
                 current: res.tempFilePath,
@@ -193,9 +220,13 @@ Page({
             }
             wx.openDocument({
               filePath: res.tempFilePath,
-              fileType: "pdf",
+              fileType: kind,
               showMenu: true,
-              fail: () => wx.showToast({ title: "无法打开 PDF", icon: "none" }),
+              fail: () =>
+                wx.showToast({
+                  title: kind === "pptx" ? "无法打开 PPT" : "无法打开文件",
+                  icon: "none",
+                }),
             });
           },
           fail: () => wx.showToast({ title: "下载失败", icon: "none" }),

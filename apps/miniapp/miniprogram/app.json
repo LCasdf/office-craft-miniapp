@@ -8,6 +8,7 @@
     "pages/rolecard/list/index",
     "pages/rolecard/create/index",
     "pages/rolecard/edit/index",
+    "pages/ppt/index",
     "pages/tasks/list/index",
     "pages/me/index"
   ],

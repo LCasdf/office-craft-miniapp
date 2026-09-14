@@ -39,6 +39,9 @@ Page({
   goRolecard() {
     wx.navigateTo({ url: "/pages/rolecard/list/index" });
   },
+  goPpt() {
+    wx.navigateTo({ url: "/pages/ppt/index" });
+  },
   goTasks() {
     wx.navigateTo({ url: "/pages/tasks/list/index" });
   },

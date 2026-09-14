@@ -28,6 +28,7 @@
           <text wx:elif="{{item.type === 'image_to_pdf'}}">图片转 PDF</text>
           <text wx:elif="{{item.type === 'office_to_pdf'}}">Word 转 PDF</text>
           <text wx:elif="{{item.type === 'character_card'}}">角色卡</text>
+          <text wx:elif="{{item.type === 'ppt_generate'}}">PPT</text>
           <text wx:else>{{item.type}}</text>
         </view>
         <view
@@ -72,7 +73,7 @@
           data-id="{{item.taskId}}"
           bindtap="onDownload"
           disabled="{{!item.canDownload}}"
-        >下载 PDF</button>
+        >{{item.downloadLabel}}</button>
         <button
           wx:if="{{item.canRetry}}"
           class="task-card__btn task-card__btn--outline"
