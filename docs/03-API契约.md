@@ -838,9 +838,12 @@
 ### 5.2 PPT 大纲
 
 - **方法 / 路径：** `POST /v1/ai/ppt/outline`
-- **鉴权：** 是
-- **幂等键：** 建议可选（大纲默认不扣或少扣，见蓝图待决策）
-- **说明：** 仅生成可编辑大纲，**不**直接出 pptx。
+- **鉴权：** 是（dev 暂 `user_id=0`）
+- **幂等键：** 建议携带 `Idempotency-Key`
+- **说明：** Mock AI 返回可编辑 `pages`；**不**创建 pptx 任务、**不**扣额度。页数 **5–15**；模板当前仅 `tpl_basic_01`。
+
+另：**PUT** `/v1/ai/ppt/outline/{outlineId}`（`If-Match` / `version`）保存二编；冲突 → `40012` `outline_version_mismatch`。
+**GET** `/v1/ai/ppt/outline/{outlineId}` 读取。
 
 #### 请求参数（Body）
 
