@@ -345,6 +345,15 @@ def task_to_list_item(task: Task) -> dict:
         e = get_error(task.error_code)
         user_msg = e.defn.user_msg if e else None
     filename, size_bytes, size_label = _input_file_summary(task)
+    out = task.output_meta if isinstance(task.output_meta, dict) else {}
+    if task.status == TaskStatus.SUCCEEDED.value and out.get("filename"):
+        filename = str(out["filename"])
+        if out.get("sizeBytes") is not None:
+            try:
+                size_bytes = int(out["sizeBytes"])
+                size_label = _format_size(size_bytes)
+            except (TypeError, ValueError):
+                pass
     return {
         "taskId": task.public_id,
         "type": task.type,

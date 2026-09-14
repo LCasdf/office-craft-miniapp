@@ -10,7 +10,7 @@ from oc_shared.error_codes import ErrorCode
 from oc_shared.schemas import envelope_err
 
 from oc_api.logging_setup import configure_logging
-from oc_api.routers import ai_character, auth, health, me, tasks, uploads
+from oc_api.routers import ai_character, ai_ppt, auth, health, me, tasks, uploads
 
 configure_logging()
 logger = structlog.get_logger(__name__)
@@ -59,6 +59,7 @@ def create_app() -> FastAPI:
     app.include_router(uploads.router, prefix="/v1")
     app.include_router(tasks.router, prefix="/v1")
     app.include_router(ai_character.router, prefix="/v1")
+    app.include_router(ai_ppt.router, prefix="/v1")
     return app
 
 

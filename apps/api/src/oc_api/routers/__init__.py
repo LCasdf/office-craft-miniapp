@@ -1,3 +1,3 @@
-from oc_api.routers import ai_character, auth, health, me, tasks, uploads
+from oc_api.routers import ai_character, ai_ppt, auth, health, me, tasks, uploads
 
-__all__ = ["ai_character", "auth", "health", "me", "tasks", "uploads"]
+__all__ = ["ai_character", "ai_ppt", "auth", "health", "me", "tasks", "uploads"]

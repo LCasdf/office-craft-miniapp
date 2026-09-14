@@ -15,6 +15,7 @@ celery_app = Celery(
         "oc_worker.tasks.tools.pdf_convert",
         "oc_worker.tasks.maintenance",
         "oc_worker.tasks.ai.character_card",
+        "oc_worker.tasks.ai.ppt_generate",
     ],
 )
 

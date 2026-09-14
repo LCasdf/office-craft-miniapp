@@ -200,6 +200,14 @@ def _enqueue(task_type: TaskType, task_id: str, request_id: str) -> None:
             queue="q.ai",
         )
         return
+    if task_type == TaskType.PPT_GENERATE:
+        from oc_worker.tasks.ai.ppt_generate import ppt_generate_task
+
+        ppt_generate_task.apply_async(
+            kwargs={"task_id": task_id, "request_id": request_id},
+            queue="q.ai",
+        )
+        return
     from oc_worker.tasks.ping import ping_task
 
     ping_task.apply_async(
